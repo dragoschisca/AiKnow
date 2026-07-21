@@ -22,3 +22,30 @@
 # virtual machine crash logs, see http://www.java.com/en/download/help/error_hotspot.xml
 hs_err_pid*
 replay_pid*
+
+
+# JetBrains IDEs (.idea)
+.idea/*
+!.idea/gcode.xml
+!.idea/codeStyles/
+!.idea/scopes/
+!.idea/dictionaries/
+!.idea/icon.remapper.xml
+
+# Ignore user-specific / machine-specific settings
+.idea/workspace.xml
+.idea/tasks.xml
+.idea/usage.statistics.xml
+.idea/dictionary.xml
+.idea/shelf/
+.idea/assetIndexes/
+.idea/dataSources/
+.idea/dataSources.local.xml
+.idea/sqlDataSources.xml
+.idea/dynamic.xml
+
+# Ignore module files & OS files
+*.iml
+*.iws
+*.ipr
+.ds_store
