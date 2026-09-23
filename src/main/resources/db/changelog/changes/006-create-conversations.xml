@@ -1,0 +1,102 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+        xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+        http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-latest.xsd">
+
+    <changeSet id="006-create-conversations" author="aiknow">
+        <createTable tableName="conversations">
+            <column name="id" type="UUID" defaultValueComputed="uuid_generate_v4()">
+                <constraints primaryKey="true" nullable="false"/>
+            </column>
+            <column name="workspace_id" type="UUID">
+                <constraints nullable="false"
+                             foreignKeyName="fk_conversations_workspace"
+                             references="workspaces(id)"/>
+            </column>
+            <column name="user_id" type="UUID">
+                <constraints nullable="false"
+                             foreignKeyName="fk_conversations_user"
+                             references="users(id)"/>
+            </column>
+            <column name="title" type="VARCHAR(500)"/>
+            <column name="created_at" type="TIMESTAMP WITHOUT TIME ZONE" defaultValueComputed="NOW()">
+                <constraints nullable="false"/>
+            </column>
+            <column name="updated_at" type="TIMESTAMP WITHOUT TIME ZONE" defaultValueComputed="NOW()">
+                <constraints nullable="false"/>
+            </column>
+        </createTable>
+
+        <createIndex tableName="conversations" indexName="idx_conversations_ws_id">
+            <column name="workspace_id"/>
+        </createIndex>
+        <createIndex tableName="conversations" indexName="idx_conversations_user_id">
+            <column name="user_id"/>
+        </createIndex>
+    </changeSet>
+
+    <changeSet id="006-create-chat-messages" author="aiknow">
+        <createTable tableName="chat_messages">
+            <column name="id" type="UUID" defaultValueComputed="uuid_generate_v4()">
+                <constraints primaryKey="true" nullable="false"/>
+            </column>
+            <column name="conversation_id" type="UUID">
+                <constraints nullable="false"
+                             foreignKeyName="fk_messages_conversation"
+                             references="conversations(id)"
+                             deleteCascade="true"/>
+            </column>
+            <column name="sender_type" type="VARCHAR(20)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="content" type="TEXT">
+                <constraints nullable="false"/>
+            </column>
+            <column name="insufficient_info" type="BOOLEAN" defaultValueBoolean="false">
+                <constraints nullable="false"/>
+            </column>
+            <column name="created_at" type="TIMESTAMP WITHOUT TIME ZONE" defaultValueComputed="NOW()">
+                <constraints nullable="false"/>
+            </column>
+        </createTable>
+
+        <createIndex tableName="chat_messages" indexName="idx_messages_conversation_id">
+            <column name="conversation_id"/>
+        </createIndex>
+    </changeSet>
+
+    <changeSet id="006-create-message-citations" author="aiknow">
+        <createTable tableName="message_citations">
+            <column name="id" type="UUID" defaultValueComputed="uuid_generate_v4()">
+                <constraints primaryKey="true" nullable="false"/>
+            </column>
+            <column name="message_id" type="UUID">
+                <constraints nullable="false"
+                             foreignKeyName="fk_citations_message"
+                             references="chat_messages(id)"
+                             deleteCascade="true"/>
+            </column>
+            <column name="document_id" type="UUID">
+                <constraints nullable="false"
+                             foreignKeyName="fk_citations_document"
+                             references="documents(id)"/>
+            </column>
+            <column name="document_name" type="VARCHAR(500)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="page_number" type="INTEGER"/>
+            <column name="chunk_id" type="UUID">
+                <constraints foreignKeyName="fk_citations_chunk"
+                             references="document_chunks(id)"/>
+            </column>
+            <column name="quote_snippet" type="TEXT"/>
+        </createTable>
+
+        <createIndex tableName="message_citations" indexName="idx_citations_message_id">
+            <column name="message_id"/>
+        </createIndex>
+    </changeSet>
+
+</databaseChangeLog>
