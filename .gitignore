@@ -23,6 +23,14 @@
 hs_err_pid*
 replay_pid*
 
+# Maven
+target/
+
+# Environment
+.env
+
+# Uploads
+uploads/
 
 # JetBrains IDEs (.idea)
 .idea/*
@@ -49,3 +57,4 @@ replay_pid*
 *.iws
 *.ipr
 .ds_store
+.DS_Store
