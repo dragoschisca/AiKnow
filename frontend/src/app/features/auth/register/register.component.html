@@ -1,0 +1,52 @@
+<div class="flex min-h-screen items-center justify-center bg-slate-50 px-4 py-10">
+  <div class="w-full max-w-sm">
+    <div class="mb-6 flex flex-col items-center gap-2">
+      <div class="flex h-9 w-9 items-center justify-center rounded-lg bg-slate-900 text-white">
+        <app-icon name="layers" [size]="18" />
+      </div>
+      <h1 class="text-lg font-semibold tracking-tight text-slate-900">Create your organization</h1>
+      <p class="text-center text-sm text-slate-500">Set up AiKnow for your team in under a minute</p>
+    </div>
+
+    <div class="panel p-5">
+      <form (ngSubmit)="submit()" class="space-y-3.5">
+        @if (errorMessage()) {
+          <div class="flex items-start gap-2 rounded-md border border-red-200 bg-red-50 px-2.5 py-2 text-sm text-red-700">
+            <app-icon name="warning" [size]="14" class="mt-0.5 shrink-0" />
+            <span>{{ errorMessage() }}</span>
+          </div>
+        }
+
+        <div>
+          <label class="field-label" for="org">Organization name</label>
+          <input id="org" class="input" type="text" name="organizationName" [(ngModel)]="organizationName" placeholder="Acme Inc." required autofocus />
+        </div>
+
+        <div>
+          <label class="field-label" for="fullName">Full name</label>
+          <input id="fullName" class="input" type="text" name="fullName" [(ngModel)]="fullName" placeholder="Jane Doe" autocomplete="name" required />
+        </div>
+
+        <div>
+          <label class="field-label" for="email">Work email</label>
+          <input id="email" class="input" type="email" name="email" [(ngModel)]="email" placeholder="you@company.com" autocomplete="email" required />
+        </div>
+
+        <div>
+          <label class="field-label" for="password">Password</label>
+          <input id="password" class="input" type="password" name="password" [(ngModel)]="password" placeholder="At least 8 characters" autocomplete="new-password" required minlength="8" />
+        </div>
+
+        <button type="submit" class="btn-primary w-full" [disabled]="submitting()">
+          @if (submitting()) { <app-icon name="spinner" [size]="14" class="animate-spin" /> }
+          Create account
+        </button>
+      </form>
+    </div>
+
+    <p class="mt-4 text-center text-sm text-slate-500">
+      Already have an account?
+      <a routerLink="/login" class="font-medium text-brand-600 hover:text-brand-700">Sign in</a>
+    </p>
+  </div>
+</div>

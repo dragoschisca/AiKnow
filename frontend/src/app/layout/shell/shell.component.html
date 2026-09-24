@@ -1,0 +1,36 @@
+<div class="flex h-screen overflow-hidden bg-slate-50">
+  @if (initializing()) {
+    <div class="flex w-full items-center justify-center">
+      <app-icon name="spinner" [size]="22" class="animate-spin text-slate-300" />
+    </div>
+  } @else if (workspaceContext.organizations().length === 0) {
+    <div class="flex w-full flex-col items-center justify-center gap-3 px-4 text-center">
+      <div class="flex h-12 w-12 items-center justify-center rounded-lg bg-slate-900 text-white">
+        <app-icon name="building" [size]="22" />
+      </div>
+      <div>
+        <h2 class="text-base font-semibold text-slate-900">Create your first organization</h2>
+        <p class="mt-1 max-w-sm text-sm text-slate-500">
+          Organizations hold your workspaces, documents, and team members. You'll be the owner.
+        </p>
+      </div>
+      <button type="button" class="btn-primary" (click)="showCreateOrgDialog.set(true)">
+        <app-icon name="plus" [size]="14" /> Create organization
+      </button>
+    </div>
+  } @else if (!workspaceContext.currentWorkspaceId()) {
+    <app-sidebar />
+    <main class="flex flex-1 items-center justify-center">
+      <p class="text-sm text-slate-500">Create a workspace to get started.</p>
+    </main>
+  } @else {
+    <app-sidebar />
+    <main class="min-w-0 flex-1 overflow-y-auto">
+      <router-outlet />
+    </main>
+  }
+</div>
+
+@if (showCreateOrgDialog()) {
+  <app-create-organization-dialog (close)="showCreateOrgDialog.set(false)" (created)="showCreateOrgDialog.set(false)" />
+}

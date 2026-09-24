@@ -1,0 +1,154 @@
+<aside class="flex h-full w-60 shrink-0 flex-col border-r border-slate-200 bg-white">
+  <!-- Brand -->
+  <div class="flex items-center gap-2 px-3 py-3">
+    <div class="flex h-6 w-6 items-center justify-center rounded-md bg-slate-900 text-white">
+      <app-icon name="layers" [size]="14" />
+    </div>
+    <span class="text-sm font-semibold tracking-tight text-slate-900">AiKnow</span>
+  </div>
+
+  <!-- Organization switcher -->
+  <div class="relative px-2 pb-1.5">
+    <button type="button" class="flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-left hover:bg-slate-100" (click)="toggleOrgMenu()">
+      <div class="flex h-6 w-6 shrink-0 items-center justify-center rounded bg-brand-600 text-xs font-semibold text-white">
+        {{ orgInitial() }}
+      </div>
+      <div class="min-w-0 flex-1">
+        <div class="truncate text-sm font-medium text-slate-900">
+          {{ workspaceContext.currentOrg()?.name ?? 'Select organization' }}
+        </div>
+      </div>
+      <app-icon name="chevron-down" [size]="14" class="shrink-0 text-slate-400" />
+    </button>
+
+    @if (orgMenuOpen()) {
+      <div class="fixed inset-0 z-10" (click)="closeMenus()"></div>
+      <div class="absolute left-2 right-2 top-full z-20 mt-1 animate-fade-in panel py-1 shadow-popover">
+        <div class="max-h-56 overflow-y-auto">
+          @for (org of workspaceContext.organizations(); track org.id) {
+            <button
+              type="button"
+              class="flex w-full items-center justify-between gap-2 px-2.5 py-1.5 text-left text-sm hover:bg-slate-50"
+              (click)="selectOrg(org.id)"
+            >
+              <span class="truncate text-slate-700">{{ org.name }}</span>
+              @if (org.id === workspaceContext.currentOrgId()) {
+                <app-icon name="check" [size]="14" class="shrink-0 text-brand-600" />
+              }
+            </button>
+          }
+          @if (workspaceContext.organizations().length === 0) {
+            <p class="px-2.5 py-1.5 text-sm text-slate-400">No organizations yet</p>
+          }
+        </div>
+        <div class="mt-1 border-t border-slate-100 pt-1">
+          <button
+            type="button"
+            class="flex w-full items-center gap-2 px-2.5 py-1.5 text-left text-sm font-medium text-brand-600 hover:bg-brand-50"
+            (click)="closeMenus(); showCreateOrgDialog.set(true)"
+          >
+            <app-icon name="plus" [size]="14" /> New organization
+          </button>
+        </div>
+      </div>
+    }
+  </div>
+
+  <!-- Workspace switcher -->
+  @if (workspaceContext.currentOrgId()) {
+    <div class="relative px-2 pb-3">
+      <button type="button" class="flex w-full items-center gap-2 rounded-md border border-slate-200 px-2 py-1.5 text-left hover:bg-slate-50" (click)="toggleWorkspaceMenu()">
+        <app-icon name="layers" [size]="14" class="shrink-0 text-slate-400" />
+        <div class="min-w-0 flex-1">
+          <div class="truncate text-sm text-slate-700">
+            {{ workspaceContext.currentWorkspace()?.name ?? 'No workspace' }}
+          </div>
+        </div>
+        <app-icon name="chevron-down" [size]="14" class="shrink-0 text-slate-400" />
+      </button>
+
+      @if (workspaceMenuOpen()) {
+        <div class="fixed inset-0 z-10" (click)="closeMenus()"></div>
+        <div class="absolute left-2 right-2 top-full z-20 mt-1 animate-fade-in panel py-1 shadow-popover">
+          <div class="max-h-56 overflow-y-auto">
+            @for (ws of workspaceContext.workspaces(); track ws.id) {
+              <button
+                type="button"
+                class="flex w-full items-center justify-between gap-2 px-2.5 py-1.5 text-left text-sm hover:bg-slate-50"
+                (click)="selectWorkspace(ws.id)"
+              >
+                <span class="truncate text-slate-700">{{ ws.name }}</span>
+                @if (ws.id === workspaceContext.currentWorkspaceId()) {
+                  <app-icon name="check" [size]="14" class="shrink-0 text-brand-600" />
+                }
+              </button>
+            }
+            @if (workspaceContext.workspaces().length === 0) {
+              <p class="px-2.5 py-1.5 text-sm text-slate-400">No workspaces yet</p>
+            }
+          </div>
+          <div class="mt-1 border-t border-slate-100 pt-1">
+            <button
+              type="button"
+              class="flex w-full items-center gap-2 px-2.5 py-1.5 text-left text-sm font-medium text-brand-600 hover:bg-brand-50"
+              (click)="closeMenus(); showCreateWorkspaceDialog.set(true)"
+            >
+              <app-icon name="plus" [size]="14" /> New workspace
+            </button>
+          </div>
+        </div>
+      }
+    </div>
+  }
+
+  <!-- Navigation -->
+  <nav class="flex-1 space-y-0.5 overflow-y-auto px-2">
+    @if (workspaceContext.currentWorkspaceId()) {
+      <a routerLink="/chat" routerLinkActive="nav-link-active" class="nav-link">
+        <app-icon name="chat" [size]="16" /> Chat
+      </a>
+      <a routerLink="/documents" routerLinkActive="nav-link-active" class="nav-link">
+        <app-icon name="document" [size]="16" /> Documents
+      </a>
+    }
+    @if (canManage() && workspaceContext.currentOrgId()) {
+      <div class="my-2 border-t border-slate-100"></div>
+      <a routerLink="/audit-log" routerLinkActive="nav-link-active" class="nav-link">
+        <app-icon name="audit" [size]="16" /> Audit Log
+      </a>
+      <a routerLink="/usage" routerLinkActive="nav-link-active" class="nav-link">
+        <app-icon name="gauge" [size]="16" /> Usage &amp; Plan
+      </a>
+    }
+  </nav>
+
+  <!-- User menu -->
+  <div class="relative border-t border-slate-100 p-2">
+    <button type="button" class="flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-left hover:bg-slate-100" (click)="toggleUserMenu()">
+      <div class="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-slate-800 text-xs font-semibold text-white">
+        {{ userInitials() }}
+      </div>
+      <div class="min-w-0 flex-1">
+        <div class="truncate text-sm font-medium text-slate-900">{{ user()?.fullName }}</div>
+        <div class="truncate text-xs text-slate-500">{{ currentRole() ?? user()?.role }}</div>
+      </div>
+      <app-icon name="chevron-down" [size]="14" class="shrink-0 text-slate-400" />
+    </button>
+
+    @if (userMenuOpen()) {
+      <div class="fixed inset-0 z-10" (click)="closeMenus()"></div>
+      <div class="absolute bottom-full left-2 right-2 z-20 mb-1 animate-fade-in panel py-1 shadow-popover">
+        <button type="button" class="flex w-full items-center gap-2 px-2.5 py-1.5 text-left text-sm text-red-600 hover:bg-red-50" (click)="logout()">
+          <app-icon name="logout" [size]="14" /> Sign out
+        </button>
+      </div>
+    }
+  </div>
+</aside>
+
+@if (showCreateOrgDialog()) {
+  <app-create-organization-dialog (close)="showCreateOrgDialog.set(false)" (created)="showCreateOrgDialog.set(false)" />
+}
+@if (showCreateWorkspaceDialog()) {
+  <app-create-workspace-dialog (close)="showCreateWorkspaceDialog.set(false)" (created)="showCreateWorkspaceDialog.set(false)" />
+}

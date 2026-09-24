@@ -1,5 +1,7 @@
 package com.aiknow.user;
 
+import com.aiknow.audit.AuditEventPublisher;
+import com.aiknow.audit.AuditEventType;
 import com.aiknow.common.ApiResponse;
 import com.aiknow.organization.Organization;
 import com.aiknow.organization.OrganizationMember;
@@ -27,6 +29,7 @@ import org.springframework.web.bind.annotation.RestController;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
+import java.util.Map;
 
 @RestController
 @RequestMapping("/api/v1/auth")
@@ -40,6 +43,7 @@ public class AuthController {
     private final RefreshTokenService refreshTokenService;
     private final OrganizationRepository organizationRepository;
     private final OrganizationMemberRepository organizationMemberRepository;
+    private final AuditEventPublisher auditEventPublisher;
 
     @PostMapping("/register")
     @Transactional
@@ -72,6 +76,9 @@ public class AuthController {
                 .role(user.getRole().name())
                 .build();
 
+        auditEventPublisher.publish(AuditEventType.USER_REGISTERED, organization.getId(), null, user.getId(),
+                "USER", user.getId(), Map.of("email", user.getEmail()));
+
         return ResponseEntity.status(HttpStatus.CREATED).body(ApiResponse.success(authResponse));
     }
 
@@ -96,6 +103,8 @@ public class AuthController {
                 .fullName(user.getFullName())
                 .role(user.getRole().name())
                 .build();
+
+        auditEventPublisher.publish(AuditEventType.USER_LOGIN, null, null, user.getId(), "USER", user.getId(), null);
 
         return ResponseEntity.ok(ApiResponse.success(authResponse));
     }
