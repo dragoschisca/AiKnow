@@ -7,6 +7,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
@@ -32,6 +33,7 @@ public class DocumentController {
 
     @PostMapping(consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     @ResponseStatus(HttpStatus.CREATED)
+    @PreAuthorize("@rbac.hasMinOrgRole(#orgId, 'MEMBER')")
     public ApiResponse<DocumentResponse> uploadDocument(
             @PathVariable UUID orgId,
             @PathVariable UUID workspaceId,
@@ -60,6 +62,7 @@ public class DocumentController {
 
     @DeleteMapping("/{documentId}")
     @ResponseStatus(HttpStatus.NO_CONTENT)
+    @PreAuthorize("@rbac.hasMinOrgRole(#orgId, 'ADMIN')")
     public void deleteDocument(
             @PathVariable UUID orgId,
             @PathVariable UUID workspaceId,
@@ -69,6 +72,7 @@ public class DocumentController {
     }
 
     @PostMapping("/{documentId}/reprocess")
+    @PreAuthorize("@rbac.hasMinOrgRole(#orgId, 'ADMIN')")
     public ApiResponse<Void> reprocessDocument(
             @PathVariable UUID orgId,
             @PathVariable UUID workspaceId,

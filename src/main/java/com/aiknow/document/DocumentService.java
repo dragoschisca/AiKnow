@@ -1,10 +1,13 @@
 package com.aiknow.document;
 
+import com.aiknow.audit.AuditEventPublisher;
+import com.aiknow.audit.AuditEventType;
 import com.aiknow.exception.ErrorCode;
 import com.aiknow.document.dto.DocumentResponse;
 import com.aiknow.exception.BadRequestException;
 import com.aiknow.exception.ResourceNotFoundException;
 import com.aiknow.organization.OrganizationService;
+import com.aiknow.subscription.UsageService;
 import com.aiknow.workspace.WorkspaceService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -13,6 +16,7 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 import java.util.stream.Collectors;
 
@@ -28,6 +32,8 @@ public class DocumentService {
     private final DocumentProcessingService documentProcessingService;
     private final OrganizationService organizationService;
     private final WorkspaceService workspaceService;
+    private final UsageService usageService;
+    private final AuditEventPublisher auditEventPublisher;
 
     @Transactional
     public Document uploadDocument(UUID orgId, UUID workspaceId, UUID userId, MultipartFile file) {
@@ -41,9 +47,11 @@ public class DocumentService {
             throw new BadRequestException("File is empty", ErrorCode.INVALID_FILE_TYPE);
         }
 
+        usageService.checkAndIncrementDocumentUsage(orgId, file.getSize());
+
         try {
             String storagePath = fileStorageService.store(orgId, workspaceId, file.getOriginalFilename(), file.getInputStream());
-            
+
             String name = file.getOriginalFilename();
             if (name != null && name.contains(".")) {
                 name = name.substring(0, name.lastIndexOf('.'));
@@ -64,6 +72,11 @@ public class DocumentService {
 
             document = documentRepository.save(document);
             documentProcessingService.processDocument(document.getId());
+
+            auditEventPublisher.publish(AuditEventType.DOCUMENT_UPLOADED, orgId, workspaceId, userId,
+                    "DOCUMENT", document.getId(),
+                    Map.of("filename", String.valueOf(file.getOriginalFilename()), "fileSize", file.getSize()));
+
             return document;
         } catch (Exception e) {
             throw new RuntimeException("Failed to upload document", e);
@@ -97,6 +110,9 @@ public class DocumentService {
         documentChunkRepository.deleteByDocumentId(documentId);
         fileStorageService.delete(document.getStoragePath());
         documentRepository.delete(document);
+        usageService.decrementDocumentUsage(orgId, document.getFileSize());
+        auditEventPublisher.publish(AuditEventType.DOCUMENT_DELETED, orgId, workspaceId, userId,
+                "DOCUMENT", documentId, Map.of("filename", String.valueOf(document.getOriginalFilename())));
         log.info("Document deleted: {}", documentId);
     }
 
@@ -113,7 +129,9 @@ public class DocumentService {
         documentChunkRepository.deleteByDocumentId(documentId);
         document.setStatus(DocumentStatus.UPLOADED);
         documentRepository.save(document);
-        
+
         documentProcessingService.processDocument(documentId);
+        auditEventPublisher.publish(AuditEventType.DOCUMENT_REPROCESSED, orgId, workspaceId, userId,
+                "DOCUMENT", documentId, null);
     }
 }
