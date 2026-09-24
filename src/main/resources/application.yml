@@ -60,9 +60,16 @@ app:
     api-key: ${GEMINI_API_KEY:}
     chat-model: ${GEMINI_CHAT_MODEL:gemini-2.5-flash}
     embedding-model: ${GEMINI_EMBEDDING_MODEL:gemini-embedding-2}
+    max-retries: ${GEMINI_MAX_RETRIES:3}
+    initial-backoff-ms: ${GEMINI_INITIAL_BACKOFF_MS:500}
 
   storage:
     upload-dir: ${FILE_STORAGE_PATH:./uploads}
+
+  rag:
+    top-k: ${RAG_TOP_K:5}
+    min-similarity: ${RAG_MIN_SIMILARITY:0.65}
+    max-history-messages: ${RAG_MAX_HISTORY_MESSAGES:10}
 
 # ============================================================
 # Logging
