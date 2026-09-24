@@ -1,5 +1,7 @@
 package com.aiknow.workspace;
 
+import com.aiknow.audit.AuditEventPublisher;
+import com.aiknow.audit.AuditEventType;
 import com.aiknow.exception.AccessDeniedException;
 import com.aiknow.exception.DuplicateResourceException;
 import com.aiknow.exception.ErrorCode;
@@ -13,6 +15,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 
 @Service
@@ -24,6 +27,7 @@ public class WorkspaceService {
     private final WorkspaceRepository workspaceRepository;
     private final WorkspaceMemberRepository workspaceMemberRepository;
     private final OrganizationService organizationService;
+    private final AuditEventPublisher auditEventPublisher;
 
     @Transactional
     public Workspace createWorkspace(UUID orgId, String name, String description, UUID creatorUserId) {
@@ -34,7 +38,7 @@ public class WorkspaceService {
                 .name(name)
                 .description(description)
                 .build();
-        
+
         Workspace savedWorkspace = workspaceRepository.save(workspace);
 
         WorkspaceMember ownerMember = WorkspaceMember.builder()
@@ -43,6 +47,9 @@ public class WorkspaceService {
                 .role(OrganizationMemberRole.OWNER)
                 .build();
         workspaceMemberRepository.save(ownerMember);
+
+        auditEventPublisher.publish(AuditEventType.WORKSPACE_CREATED, orgId, savedWorkspace.getId(), creatorUserId,
+                "WORKSPACE", savedWorkspace.getId(), Map.of("name", name));
 
         return savedWorkspace;
     }
@@ -61,19 +68,28 @@ public class WorkspaceService {
                 .orElseThrow(() -> new ResourceNotFoundException("Workspace not found", ErrorCode.WORKSPACE_NOT_FOUND));
     }
 
+    public Workspace getWorkspaceById(UUID workspaceId) {
+        return workspaceRepository.findById(workspaceId)
+                .orElseThrow(() -> new ResourceNotFoundException("Workspace not found", ErrorCode.WORKSPACE_NOT_FOUND));
+    }
+
     @Transactional
-    public WorkspaceMember addMember(UUID workspaceId, UUID userId, OrganizationMemberRole role) {
+    public WorkspaceMember addMember(UUID workspaceId, UUID userId, OrganizationMemberRole role, UUID actorUserId) {
         if (workspaceMemberRepository.existsByWorkspaceIdAndUserId(workspaceId, userId)) {
             throw new DuplicateResourceException("User is already a member of this workspace", null);
         }
-        
+
         WorkspaceMember member = WorkspaceMember.builder()
                 .workspaceId(workspaceId)
                 .userId(userId)
                 .role(role)
                 .build();
-                
-        return workspaceMemberRepository.save(member);
+
+        WorkspaceMember saved = workspaceMemberRepository.save(member);
+        Workspace workspace = getWorkspaceById(workspaceId);
+        auditEventPublisher.publish(AuditEventType.MEMBER_ADDED, workspace.getOrganizationId(), workspaceId, actorUserId,
+                "WORKSPACE_MEMBER", saved.getId(), Map.of("targetUserId", userId.toString(), "role", role.name()));
+        return saved;
     }
 
     public void validateMembership(UUID workspaceId, UUID userId) {

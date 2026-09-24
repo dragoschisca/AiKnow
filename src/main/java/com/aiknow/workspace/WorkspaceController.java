@@ -10,6 +10,7 @@ import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.*;
 
@@ -27,6 +28,7 @@ public class WorkspaceController {
 
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
+    @PreAuthorize("@rbac.hasMinOrgRole(#orgId, 'ADMIN')")
     public ApiResponse<WorkspaceResponse> create(@PathVariable UUID orgId, @Valid @RequestBody CreateWorkspaceRequest request) {
         UUID userId = getCurrentUser().getId();
         Workspace workspace = workspaceService.createWorkspace(orgId, request.name(), request.description(), userId);
@@ -50,11 +52,12 @@ public class WorkspaceController {
 
     @PostMapping("/{id}/members")
     @ResponseStatus(HttpStatus.CREATED)
+    @PreAuthorize("@rbac.hasMinOrgRole(#orgId, 'ADMIN')")
     public ApiResponse<Void> addMember(@PathVariable UUID orgId, @PathVariable UUID id, @Valid @RequestBody AddMemberRequest request) {
         UUID userId = getCurrentUser().getId();
         organizationService.validateMembership(orgId, userId);
-        
-        workspaceService.addMember(id, request.userId(), request.role());
+
+        workspaceService.addMember(id, request.userId(), request.role(), userId);
         return ApiResponse.success(null);
     }
 
