@@ -29,30 +29,52 @@ public class GeminiEmbeddingService implements EmbeddingService {
     @Override
     public List<float[]> generateEmbeddings(List<String> texts) {
         List<float[]> embeddings = new ArrayList<>();
-        try {
-            for (String text : texts) {
-                // Using the basic approach assuming EmbedContentResponse structure
-                EmbedContentResponse response = client.models.embedContent(
-                        model,
-                        text,
-                        null
-                );
+        for (String text : texts) {
+            embeddings.add(embedWithRetry(text));
+        }
+        return embeddings;
+    }
+
+    @Override
+    public float[] generateEmbedding(String text) {
+        return embedWithRetry(text);
+    }
+
+    private float[] embedWithRetry(String text) {
+        int maxRetries = appProperties.getGemini().getMaxRetries();
+        long backoffMs = appProperties.getGemini().getInitialBackoffMs();
+
+        RuntimeException lastError = null;
+        for (int attempt = 0; attempt <= maxRetries; attempt++) {
+            try {
+                EmbedContentResponse response = client.models.embedContent(model, text, null);
                 List<Float> values = response.embeddings().get().get(0).values().get();
                 float[] arr = new float[values.size()];
                 for (int i = 0; i < values.size(); i++) {
                     arr[i] = values.get(i);
                 }
-                embeddings.add(arr);
+                return arr;
+            } catch (RuntimeException e) {
+                lastError = e;
+                if (attempt == maxRetries) {
+                    break;
+                }
+                long delay = backoffMs * (1L << attempt);
+                log.warn("Gemini embedding call failed (attempt {}/{}), retrying in {}ms: {}",
+                        attempt + 1, maxRetries + 1, delay, e.getMessage());
+                sleep(delay);
             }
-            return embeddings;
-        } catch (Exception e) {
-            log.error("Failed to generate embeddings", e);
-            throw new RuntimeException("Failed to generate embeddings", e);
         }
+        log.error("Failed to generate embedding after {} attempts", maxRetries + 1, lastError);
+        throw new RuntimeException("Failed to generate embedding after " + (maxRetries + 1) + " attempts", lastError);
     }
 
-    @Override
-    public float[] generateEmbedding(String text) {
-        return generateEmbeddings(List.of(text)).get(0);
+    private void sleep(long millis) {
+        try {
+            Thread.sleep(millis);
+        } catch (InterruptedException ie) {
+            Thread.currentThread().interrupt();
+            throw new RuntimeException("Interrupted while retrying Gemini embedding call", ie);
+        }
     }
 }
