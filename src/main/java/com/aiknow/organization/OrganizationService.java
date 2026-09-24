@@ -1,5 +1,7 @@
 package com.aiknow.organization;
 
+import com.aiknow.audit.AuditEventPublisher;
+import com.aiknow.audit.AuditEventType;
 import com.aiknow.exception.AccessDeniedException;
 import com.aiknow.exception.DuplicateResourceException;
 import com.aiknow.exception.ErrorCode;
@@ -12,6 +14,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 
 @Service
@@ -23,6 +26,7 @@ public class OrganizationService {
     private final OrganizationRepository organizationRepository;
     private final OrganizationMemberRepository organizationMemberRepository;
     private final UserRepository userRepository;
+    private final AuditEventPublisher auditEventPublisher;
 
     @Transactional
     public Organization createOrganization(String name, UUID creatorUserId) {
@@ -35,7 +39,7 @@ public class OrganizationService {
                 .name(name)
                 .slug(slug)
                 .build();
-        
+
         Organization savedOrg = organizationRepository.save(organization);
 
         OrganizationMember ownerMember = OrganizationMember.builder()
@@ -44,6 +48,9 @@ public class OrganizationService {
                 .role(OrganizationMemberRole.OWNER)
                 .build();
         organizationMemberRepository.save(ownerMember);
+
+        auditEventPublisher.publish(AuditEventType.ORGANIZATION_CREATED, savedOrg.getId(), null, creatorUserId,
+                "ORGANIZATION", savedOrg.getId(), Map.of("name", name));
 
         return savedOrg;
     }
@@ -64,7 +71,7 @@ public class OrganizationService {
     }
 
     @Transactional
-    public OrganizationMember addMember(UUID orgId, UUID userId, OrganizationMemberRole role) {
+    public OrganizationMember addMember(UUID orgId, UUID userId, OrganizationMemberRole role, UUID actorUserId) {
         if (!organizationRepository.existsById(orgId)) {
             throw new ResourceNotFoundException("Organization not found", ErrorCode.ORG_NOT_FOUND);
         }
@@ -81,13 +88,31 @@ public class OrganizationService {
                 .role(role)
                 .build();
 
-        return organizationMemberRepository.save(member);
+        OrganizationMember saved = organizationMemberRepository.save(member);
+        auditEventPublisher.publish(AuditEventType.MEMBER_ADDED, orgId, null, actorUserId,
+                "ORGANIZATION_MEMBER", saved.getId(), Map.of("targetUserId", userId.toString(), "role", role.name()));
+        return saved;
     }
 
     @Transactional
-    public void removeMember(UUID orgId, UUID userId) {
+    public void removeMember(UUID orgId, UUID userId, UUID actorUserId) {
         OrganizationMember membership = getMembership(orgId, userId);
         organizationMemberRepository.delete(membership);
+        auditEventPublisher.publish(AuditEventType.MEMBER_REMOVED, orgId, null, actorUserId,
+                "ORGANIZATION_MEMBER", membership.getId(),
+                Map.of("targetUserId", userId.toString(), "role", membership.getRole().name()));
+    }
+
+    @Transactional
+    public OrganizationMember changeMemberRole(UUID orgId, UUID userId, OrganizationMemberRole newRole, UUID actorUserId) {
+        OrganizationMember membership = getMembership(orgId, userId);
+        OrganizationMemberRole previousRole = membership.getRole();
+        membership.setRole(newRole);
+        OrganizationMember saved = organizationMemberRepository.save(membership);
+        auditEventPublisher.publish(AuditEventType.ROLE_CHANGED, orgId, null, actorUserId,
+                "ORGANIZATION_MEMBER", saved.getId(),
+                Map.of("targetUserId", userId.toString(), "from", previousRole.name(), "to", newRole.name()));
+        return saved;
     }
 
     public OrganizationMember getMembership(UUID orgId, UUID userId) {

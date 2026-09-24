@@ -2,6 +2,7 @@ package com.aiknow.organization;
 
 import com.aiknow.common.ApiResponse;
 import com.aiknow.organization.dto.AddMemberRequest;
+import com.aiknow.organization.dto.ChangeRoleRequest;
 import com.aiknow.organization.dto.CreateOrganizationRequest;
 import com.aiknow.organization.dto.OrganizationResponse;
 import com.aiknow.security.UserDetailsImpl;
@@ -9,6 +10,7 @@ import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.*;
 
@@ -50,15 +52,30 @@ public class OrganizationController {
 
     @PostMapping("/{id}/members")
     @ResponseStatus(HttpStatus.CREATED)
+    @PreAuthorize("@rbac.hasOrgRole(#id, 'OWNER')")
     public ApiResponse<Void> addMember(@PathVariable UUID id, @Valid @RequestBody AddMemberRequest request) {
-        organizationService.addMember(id, request.userId(), request.role());
+        UUID actorUserId = getCurrentUser().getId();
+        organizationService.addMember(id, request.userId(), request.role(), actorUserId);
         return ApiResponse.success(null);
     }
 
     @DeleteMapping("/{id}/members/{userId}")
     @ResponseStatus(HttpStatus.NO_CONTENT)
+    @PreAuthorize("@rbac.hasOrgRole(#id, 'OWNER')")
     public ApiResponse<Void> removeMember(@PathVariable UUID id, @PathVariable UUID userId) {
-        organizationService.removeMember(id, userId);
+        UUID actorUserId = getCurrentUser().getId();
+        organizationService.removeMember(id, userId, actorUserId);
+        return ApiResponse.success(null);
+    }
+
+    @PatchMapping("/{id}/members/{userId}/role")
+    @PreAuthorize("@rbac.hasOrgRole(#id, 'OWNER')")
+    public ApiResponse<Void> changeMemberRole(
+            @PathVariable UUID id,
+            @PathVariable UUID userId,
+            @Valid @RequestBody ChangeRoleRequest request) {
+        UUID actorUserId = getCurrentUser().getId();
+        organizationService.changeMemberRole(id, userId, request.role(), actorUserId);
         return ApiResponse.success(null);
     }
 
